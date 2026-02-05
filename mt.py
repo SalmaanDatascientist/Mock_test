@@ -15,7 +15,7 @@ st.set_page_config(
     page_title="The Molecular Man - Mock Test",
     page_icon="🧬",
     layout="centered",
-    initial_sidebar_state="expanded" # Force open by default
+    initial_sidebar_state="expanded" 
 )
 
 # --- 3. STYLING: HIGH VISIBILITY OVERRIDE ---
@@ -98,14 +98,13 @@ st.markdown("""
     }
     
     /* --- FIX: HIDE MENU BUT KEEP SIDEBAR BUTTON VISIBLE --- */
-    #MainMenu {visibility: hidden;} /* Hides the 3 dots */
-    footer {visibility: hidden;}    /* Hides "Made with Streamlit" */
-    .stDeployButton {display: none;} /* Hides "Deploy" button */
+    #MainMenu {visibility: hidden;} 
+    footer {visibility: hidden;}    
+    .stDeployButton {display: none;} 
     
-    /* Ensure the sidebar toggle (chevron) remains visible */
     [data-testid="collapsedControl"] {
         display: block;
-        color: #000000 !important; /* Make sure the arrow is black */
+        color: #000000 !important; 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -289,11 +288,12 @@ def grade_descriptive(api_key, model, questions, user_answers, board, cls, sub):
 
 # --- 6. UI: Header & Sidebar ---
 
+# SAFE IMAGE LOADING (Prevents crash if image is broken/missing)
 try:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.image("logo.png", width=200)
-except FileNotFoundError:
+except Exception:
     st.markdown("<h1 style='text-align: center; color: #0d1b2a;'>🧬 The Molecular Man</h1>", unsafe_allow_html=True)
 
 st.markdown("<h3 style='text-align: center; color: #1e3a5f;'>Expert Tuition Solutions - Mock Test</h3>", unsafe_allow_html=True)
@@ -464,4 +464,5 @@ if st.session_state.feedback:
         st.session_state.feedback = None
         st.session_state.user_answers = {}
         st.session_state.score = 0
+
         st.rerun()
