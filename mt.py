@@ -15,7 +15,7 @@ st.set_page_config(
     page_title="The Molecular Man - Mock Test",
     page_icon="🧬",
     layout="centered",
-    initial_sidebar_state="expanded" 
+    initial_sidebar_state="collapsed" 
 )
 
 # --- 3. STYLING: HIGH VISIBILITY OVERRIDE ---
@@ -27,19 +27,12 @@ st.markdown("""
         color: #000000 !important;
     }
 
-    /* SIDEBAR: Force White Background & Black Text */
-    section[data-testid="stSidebar"] {
-        background-color: #ffffff !important;
-        border-right: 2px solid #1e3a5f;
-    }
-    
-    section[data-testid="stSidebar"] h1, 
-    section[data-testid="stSidebar"] h2, 
-    section[data-testid="stSidebar"] h3, 
-    section[data-testid="stSidebar"] label, 
-    section[data-testid="stSidebar"] span,
-    section[data-testid="stSidebar"] p {
-        color: #000000 !important;
+    /* CONTAINER STYLING */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
 
     /* INPUT FIELDS */
@@ -75,6 +68,9 @@ st.markdown("""
         color: #ffffff !important;
         border: 2px solid white !important;
         font-weight: bold !important;
+        padding: 10px 24px !important;
+        border-radius: 8px !important;
+        width: 100%;
     }
     .stButton > button:hover {
         background: #2c5282 !important;
@@ -85,27 +81,19 @@ st.markdown("""
     .stRadio label {
         color: #000000 !important;
         font-weight: 500 !important;
-        background-color: rgba(255,255,255,0.3);
-        padding: 5px;
-        border-radius: 5px;
-        width: 100%;
     }
 
     /* HEADERS */
-    h1, h2, h3 {
+    h1, h2, h3, h4 {
         color: #0d1b2a !important;
         font-family: sans-serif;
     }
     
-    /* --- FIX: HIDE MENU BUT KEEP SIDEBAR BUTTON VISIBLE --- */
+    /* HIDE MENU */
     #MainMenu {visibility: hidden;} 
     footer {visibility: hidden;}    
     .stDeployButton {display: none;} 
-    
-    [data-testid="collapsedControl"] {
-        display: block;
-        color: #000000 !important; 
-    }
+    section[data-testid="stSidebar"] {display: none;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -286,183 +274,183 @@ def grade_descriptive(api_key, model, questions, user_answers, board, cls, sub):
     except Exception as e:
         return f"Error grading descriptive answers: {str(e)}"
 
-# --- 6. UI: Header & Sidebar ---
+# --- 6. MAIN APP LOGIC ---
 
-# SAFE IMAGE LOADING (Prevents crash if image is broken/missing)
+# Header
 try:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.image("logo.png", width=200)
+        st.image("logo.png", use_container_width=True)
 except Exception:
     st.markdown("<h1 style='text-align: center; color: #0d1b2a;'>🧬 The Molecular Man</h1>", unsafe_allow_html=True)
 
 st.markdown("<h3 style='text-align: center; color: #1e3a5f;'>Expert Tuition Solutions - Mock Test</h3>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Sidebar
-with st.sidebar:
-    st.header("⚙️ Configuration")
-    
-    # --- AUTO CONNECTION CHECK ---
-    api_key = None
-    is_online = False
+# API Connection Check
+api_key = None
+is_online = False
+if "GROQ_API_KEY" in st.secrets:
+    api_key = st.secrets["GROQ_API_KEY"]
+    if not st.session_state.available_models:
+        st.session_state.available_models = fetch_available_models(api_key)
+    if st.session_state.available_models:
+        is_online = True
+else:
+    st.error("🔴 Config Missing: Please set GROQ_API_KEY in Secrets.")
+    st.stop()
 
-    # Check for secret in Streamlit Cloud
-    if "GROQ_API_KEY" in st.secrets:
-        api_key = st.secrets["GROQ_API_KEY"]
-        
-        # Test connection by fetching models if needed
-        if not st.session_state.available_models:
-             with st.spinner("Connecting to AYA..."):
-                st.session_state.available_models = fetch_available_models(api_key)
-        
-        # Status Display
-        if st.session_state.available_models:
-            is_online = True
-            st.success("🟢 AYA is Online")
-        else:
-            st.error("🔴 AYA is Offline")
-            st.caption("Check API Key or Internet.")
-    else:
-        st.error("🔴 Config Missing")
-        st.info("Please set GROQ_API_KEY in Secrets.")
-
-    # --- MODEL SELECTION (Only visible if Online) ---
-    model_choice = None
-    if is_online and st.session_state.available_models:
+# --- MODEL SELECTION (Hidden in Expander to keep UI clean) ---
+model_choice = None
+if is_online and st.session_state.available_models:
+    with st.expander("🛠️ Advanced Settings (AI Model)", expanded=False):
         default_ix = 0
         for i, m in enumerate(st.session_state.available_models):
             if "llama-3.3" in m:
                 default_ix = i
                 break
         model_choice = st.selectbox("Select Model", st.session_state.available_models, index=default_ix)
-    
-    st.subheader("Test Details")
-    board = st.selectbox("Select Board", ["CBSE", "ICSE", "IGCSE", "State Board", "Other"])
-    student_class = st.selectbox("Select Class", [str(i) for i in range(6, 13)] + ["Other"])
-    subject = st.text_input("Subject (e.g., Physics)")
-    chapter = st.text_input("Chapter Name")
-    
-    q_type = st.radio("Question Type", ["MCQ", "Descriptive"])
-    
-    col_q1, col_q2 = st.columns(2)
-    with col_q1:
-        num_questions = st.number_input("No. of Qs", min_value=1, max_value=20, value=5)
-    with col_q2:
-        difficulty = st.selectbox("Difficulty", ["Easy", "Medium", "Hard"])
 
-    # Button is disabled if AYA is offline
-    generate_btn = st.button("Generate Test", type="primary", disabled=not is_online)
-
-# --- 7. MAIN LOGIC ---
-
-if generate_btn:
-    if not is_online:
-        st.error("System is offline. Cannot generate test.")
-    elif not subject or not chapter:
-        st.warning("Please enter Subject and Chapter details.")
-    else:
-        with st.spinner(f"Creating {board} pattern {q_type}s..."):
-            st.session_state.user_answers = {}
-            st.session_state.feedback = None
-            st.session_state.score = 0
-            st.session_state.q_type = q_type
-            
-            questions = generate_questions_groq(
-                api_key, model_choice, board, student_class, subject, chapter, num_questions, difficulty, q_type
-            )
-            
-            if questions:
-                st.session_state.questions = questions
-                st.rerun()
-
-if st.session_state.questions:
-    st.subheader(f"📝 {subject}: {chapter} ({st.session_state.q_type})")
+# ---------------------------------------------------------
+# VIEW 1: CONFIGURATION DASHBOARD (If no questions generated)
+# ---------------------------------------------------------
+if not st.session_state.questions:
+    st.markdown("#### ⚙️ Configure Your Test")
     
-    with st.form("exam_form"):
-        for q in st.session_state.questions:
-            label = f"**Q{q['id']}. {q['question']}**"
-            if st.session_state.q_type == "Descriptive":
-                label += f" *({q.get('marks', 1)} Marks)*"
-            
-            st.markdown(label)
-            
-            if st.session_state.q_type == "MCQ":
-                st.radio(
-                    "Select Option:",
-                    q['options'],
-                    key=f"ans_{q['id']}",
-                    index=None,
-                    label_visibility="collapsed"
-                )
-            else:
-                st.text_area(
-                    "Write your answer:",
-                    key=f"ans_{q['id']}",
-                    height=100
-                )
-            st.markdown("---")
+    with st.container(border=True):
+        col_main1, col_main2 = st.columns(2, gap="medium")
         
-        submit_btn = st.form_submit_button("Submit Test")
+        with col_main1:
+            st.markdown("**1. Exam Details**")
+            board = st.selectbox("Select Board", ["CBSE", "ICSE", "IGCSE", "State Board", "Other"])
+            student_class = st.selectbox("Select Class", [str(i) for i in range(6, 13)] + ["Other"])
+            difficulty = st.selectbox("Difficulty", ["Easy", "Medium", "Hard"])
 
-    if submit_btn:
-        all_answered = True
-        for q in st.session_state.questions:
-            key = f"ans_{q['id']}"
-            val = st.session_state.get(key)
-            if val is None or val == "":
-                all_answered = False
-            st.session_state.user_answers[str(q['id'])] = val
-        
-        if not all_answered and st.session_state.q_type == "MCQ":
-            st.error("Please answer all questions before submitting.")
+        with col_main2:
+            st.markdown("**2. Topic Details**")
+            subject = st.text_input("Subject (e.g., Physics)")
+            chapter = st.text_input("Chapter Name")
+            
+            sub_c1, sub_c2 = st.columns(2)
+            with sub_c1:
+                q_type = st.radio("Type", ["MCQ", "Descriptive"])
+            with sub_c2:
+                num_questions = st.number_input("Count", min_value=1, max_value=20, value=5)
+
+    st.write("")
+    if st.button("🚀 GENERATE MOCK TEST", type="primary", disabled=not is_online):
+        if not subject or not chapter:
+            st.warning("⚠️ Please enter Subject and Chapter details.")
         else:
-            with st.spinner("Evaluating your performance..."):
+            with st.spinner(f"Creating {board} pattern {q_type}s..."):
+                st.session_state.user_answers = {}
+                st.session_state.feedback = None
+                st.session_state.score = 0
+                st.session_state.q_type = q_type
+                
+                questions = generate_questions_groq(
+                    api_key, model_choice, board, student_class, subject, chapter, num_questions, difficulty, q_type
+                )
+                
+                if questions:
+                    st.session_state.questions = questions
+                    st.rerun()
+
+# ---------------------------------------------------------
+# VIEW 2: EXAM INTERFACE (If questions exist)
+# ---------------------------------------------------------
+else:
+    # If feedback exists, show results
+    if st.session_state.feedback:
+        st.header("📊 Result Analysis")
+        
+        if st.session_state.q_type == "MCQ":
+            total = st.session_state.total_marks
+            score = st.session_state.score
+            st.metric("Score", f"{score}/{total}")
+        
+        st.success("Analysis Complete")
+        with st.container(border=True):
+            st.markdown("### Examiner's Feedback")
+            st.markdown(st.session_state.feedback)
+        
+        if st.session_state.q_type == "MCQ":
+            with st.expander("View Answer Key"):
+                for q in st.session_state.questions:
+                    u_ans = st.session_state.user_answers.get(str(q['id']))
+                    c_ans = q['correct_answer']
+                    color = "green" if u_ans == c_ans else "red"
+                    st.markdown(f"**Q{q['id']}:** {q['question']}")
+                    st.markdown(f":{color}[Your Answer: {u_ans}]")
+                    if u_ans != c_ans:
+                        st.markdown(f"**Correct Answer:** {c_ans}")
+                    st.markdown("---")
+
+        st.write("")
+        if st.button("🔄 START NEW TEST"):
+            st.session_state.questions = None
+            st.session_state.feedback = None
+            st.session_state.user_answers = {}
+            st.session_state.score = 0
+            st.rerun()
+
+    # If no feedback yet, show questions
+    else:
+        st.subheader(f"📝 Topic: {st.session_state.questions[0].get('question', 'Test')[:0]} Current Test") # Hacky title fix or just use Subject
+        
+        with st.form("exam_form"):
+            for q in st.session_state.questions:
+                label = f"**Q{q['id']}. {q['question']}**"
+                if st.session_state.q_type == "Descriptive":
+                    label += f" *({q.get('marks', 1)} Marks)*"
+                
+                st.markdown(label)
+                
                 if st.session_state.q_type == "MCQ":
-                    feedback = grade_mcq(
-                        api_key, model_choice,
-                        st.session_state.questions, 
-                        st.session_state.user_answers,
-                        board, student_class, subject
+                    st.radio(
+                        "Select Option:",
+                        q['options'],
+                        key=f"ans_{q['id']}",
+                        index=None,
+                        label_visibility="collapsed"
                     )
                 else:
-                    feedback = grade_descriptive(
-                        api_key, model_choice,
-                        st.session_state.questions, 
-                        st.session_state.user_answers,
-                        board, student_class, subject
+                    st.text_area(
+                        "Write your answer:",
+                        key=f"ans_{q['id']}",
+                        height=100
                     )
-                
-                st.session_state.feedback = feedback
-                st.rerun()
-
-if st.session_state.feedback:
-    st.header("📊 Result Analysis")
-    
-    if st.session_state.q_type == "MCQ":
-        total = st.session_state.total_marks
-        score = st.session_state.score
-        st.metric("Score", f"{score}/{total}")
-    
-    st.markdown("### Examiner's Feedback")
-    st.markdown(st.session_state.feedback)
-    
-    if st.session_state.q_type == "MCQ":
-        with st.expander("View Answer Key"):
-            for q in st.session_state.questions:
-                u_ans = st.session_state.user_answers.get(str(q['id']))
-                c_ans = q['correct_answer']
-                color = "green" if u_ans == c_ans else "red"
-                st.markdown(f"**Q{q['id']}:** {q['question']}")
-                st.markdown(f":{color}[Your Answer: {u_ans}]")
-                if u_ans != c_ans:
-                    st.markdown(f"**Correct Answer:** {c_ans}")
                 st.markdown("---")
+            
+            submit_btn = st.form_submit_button("✅ Submit Test")
 
-    if st.button("Start New Test"):
-        st.session_state.questions = None
-        st.session_state.feedback = None
-        st.session_state.user_answers = {}
-        st.session_state.score = 0
-
-        st.rerun()
+        if submit_btn:
+            all_answered = True
+            for q in st.session_state.questions:
+                key = f"ans_{q['id']}"
+                val = st.session_state.get(key)
+                if val is None or val == "":
+                    all_answered = False
+                st.session_state.user_answers[str(q['id'])] = val
+            
+            if not all_answered and st.session_state.q_type == "MCQ":
+                st.error("Please answer all questions before submitting.")
+            else:
+                with st.spinner("Evaluating your performance..."):
+                    if st.session_state.q_type == "MCQ":
+                        feedback = grade_mcq(
+                            api_key, model_choice,
+                            st.session_state.questions, 
+                            st.session_state.user_answers,
+                            "Board", "Class", "Subject" # Placeholders or store these in session state if needed for prompt
+                        )
+                    else:
+                        feedback = grade_descriptive(
+                            api_key, model_choice,
+                            st.session_state.questions, 
+                            st.session_state.user_answers,
+                            "Board", "Class", "Subject"
+                        )
+                    
+                    st.session_state.feedback = feedback
+                    st.rerun()
