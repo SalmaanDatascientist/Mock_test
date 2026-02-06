@@ -300,7 +300,7 @@ else:
     st.error("🔴 Config Missing: Please set GROQ_API_KEY in Secrets.")
     st.stop()
 
-# --- MODEL SELECTION (Hidden in Expander to keep UI clean) ---
+# --- MODEL SELECTION (Hidden in Expander) ---
 model_choice = None
 if is_online and st.session_state.available_models:
     with st.expander("🛠️ Advanced Settings (AI Model)", expanded=False):
@@ -396,7 +396,9 @@ else:
 
     # If no feedback yet, show questions
     else:
-        st.subheader(f"📝 Topic: {st.session_state.questions[0].get('question', 'Test')[:0]} Current Test") # Hacky title fix or just use Subject
+        # Use safe indexing or subject name for title
+        title_sub = st.session_state.questions[0].get('question', 'Test')[:0] 
+        st.subheader(f"📝 Current Test") 
         
         with st.form("exam_form"):
             for q in st.session_state.questions:
@@ -421,89 +423,9 @@ else:
                         height=100
                     )
                 st.markdown("---")
-                st.markdown("""
-<style>
-    /* GLOBAL: Force light mode text on teal background */
-    .stApp {
-        background: linear-gradient(135deg, #4a90a4 0%, #6bb5c7 50%, #8fd4e3 100%) !important;
-        color: #000000 !important;
-    }
-
-    /* CONTAINER STYLING */
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: rgba(255, 255, 255, 0.9);
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    /* INPUT FIELDS */
-    .stTextInput input, 
-    .stSelectbox div[data-baseweb="select"] > div, 
-    .stNumberInput input {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-        border: 1px solid #4a90a4 !important;
-    }
-
-    /* BUTTONS: Force WHITE text on Dark Blue Background */
-    /* We target both standard buttons and the Form Submit button specifically */
-    .stButton > button, div[data-testid="stFormSubmitButton"] > button {
-        background: #1e3a5f !important;
-        color: #ffffff !important; /* <--- FORCES WHITE TEXT */
-        border: 2px solid white !important;
-        font-weight: bold !important;
-        padding: 10px 24px !important;
-        border-radius: 8px !important;
-        width: 100%;
-    }
-    
-    /* HOVER EFFECT */
-    .stButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover {
-        background: #2c5282 !important;
-        color: #ffffff !important; /* Ensure text stays white on hover */
-        transform: scale(1.02);
-        border-color: #ffd700 !important;
-    }
-
-    /* DROPDOWN MENUS */
-    div[data-baseweb="popover"] {
-        background-color: #ffffff !important;
-    }
-    div[data-baseweb="menu"] {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-    }
-    div[role="option"] {
-        color: #000000 !important;
-    }
-
-    /* TEXT AREAS */
-    .stTextArea textarea {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-    }
-
-    /* RADIO BUTTONS */
-    .stRadio label {
-        color: #000000 !important;
-        font-weight: 500 !important;
-    }
-
-    /* HEADERS */
-    h1, h2, h3, h4 {
-        color: #0d1b2a !important;
-        font-family: sans-serif;
-    }
-    
-    /* HIDE MENU */
-    #MainMenu {visibility: hidden;} 
-    footer {visibility: hidden;}    
-    .stDeployButton {display: none;} 
-    section[data-testid="stSidebar"] {display: none;}
-</style>
-""", unsafe_allow_html=True)
-                
+            
+            # --- FIX: SUBMIT BUTTON PLACEMENT ---
+            submit_btn = st.form_submit_button("Submit Exam")
 
         if submit_btn:
             all_answered = True
@@ -523,7 +445,7 @@ else:
                             api_key, model_choice,
                             st.session_state.questions, 
                             st.session_state.user_answers,
-                            "Board", "Class", "Subject" # Placeholders or store these in session state if needed for prompt
+                            "Board", "Class", "Subject" 
                         )
                     else:
                         feedback = grade_descriptive(
@@ -535,4 +457,3 @@ else:
                     
                     st.session_state.feedback = feedback
                     st.rerun()
-
