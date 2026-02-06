@@ -62,8 +62,9 @@ st.markdown("""
         color: #000000 !important;
     }
 
-    /* BUTTONS: White text on Dark Blue */
-    .stButton > button {
+    /* --- BUTTON STYLING FIX --- */
+    /* Target Standard Buttons AND Form Submit Buttons */
+    .stButton > button, div[data-testid="stFormSubmitButton"] > button {
         background: #1e3a5f !important;
         color: #ffffff !important;
         border: 2px solid white !important;
@@ -72,9 +73,21 @@ st.markdown("""
         border-radius: 8px !important;
         width: 100%;
     }
-    .stButton > button:hover {
+    
+    /* CRITICAL FIX: Force inner text of the Submit button to be white */
+    div[data-testid="stFormSubmitButton"] > button p {
+        color: #ffffff !important;
+    }
+
+    /* HOVER EFFECT */
+    .stButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover {
         background: #2c5282 !important;
         transform: scale(1.02);
+        border-color: #ffd700 !important;
+    }
+    /* Ensure hover text remains white */
+    div[data-testid="stFormSubmitButton"] > button:hover p {
+        color: #ffffff !important;
     }
 
     /* RADIO BUTTONS */
@@ -424,7 +437,6 @@ else:
                     )
                 st.markdown("---")
             
-            # --- FIX: SUBMIT BUTTON PLACEMENT ---
             submit_btn = st.form_submit_button("Submit Exam")
 
         if submit_btn:
